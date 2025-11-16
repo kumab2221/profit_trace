@@ -1,0 +1,26 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "type": "stdio",
+      "command": "cmd",
+      "args": [
+        "/c",
+        "npx",
+        "@modelcontextprotocol/server-filesystem"
+      ],
+      "env": {}
+    },
+    "context7": {
+      "type": "stdio",
+      "command": "cmd",
+      "args": [
+        "/c",
+        "npx",
+        "@upstash/context7-mcp",
+        "--api-key",
+        "ctx7sk-d4023cdb-971a-4ba5-bb45-6de870484dd6"
+      ],
+      "env": {}
+    }
+  }
+}
