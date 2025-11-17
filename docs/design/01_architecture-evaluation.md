@@ -57,16 +57,16 @@ Profit Trace は、複数プロジェクトの工数消化状況を日次で可�
 
 ## 3. Candidate Architectures（候補アーキテクチャ）
 
-### 3.1 Candidate A: Layered Monolith（3 層構成 + MVP パターン）
+### 3.1 Candidate A: Layered Monolith（3 層構成 + MVVM パターン）
 
 #### 概要
-シンプルな 3 層構成（Presentation / Application / Infrastructure）のモノリスアーキテクチャ。Presentation 層に MVP（Model-View-Presenter）パターンを適用し、UI とビジネスロジックを分離する。小規模デスクトップアプリに適した構成で、学習コストが低く、実装速度が速い。
+シンプルな 3 層構成（Presentation / Application / Infrastructure）のモノリスアーキテクチャ。Presentation 層に MVVM（Model-View-ViewModel）パターンを適用し、UI とビジネスロジックを分離する。Qt の Signal/Slot メカニズムと親和性が高く、小規模デスクトップアプリに適した構成で、学習コストが低く、実装速度が速い。
 
 #### 主な構成要素
 - **Presentation 層**:
   - PySide6（View: QMainWindow / QWidget / QDialog）
-  - MVP パターン（Presenter が View ↔ Application 層の仲介）
-  - 責務: ユーザー入力の受付、画面表示、プログレスバー / エラーダイアログの表示
+  - MVVM パターン（ViewModel が View ↔ Application 層の仲介、Signal/Slot でデータバインディング）
+  - 責務: ユーザー入力の受付（View が Signal で ViewModel に通知）、画面表示（ViewModel の Signal を View が Slot で受け取り）、プログレスバー / エラーダイアログの表示
 - **Application 層**:
   - ビジネスロジック（工数集計、バーンダウン計算、メンバー稼働分析、要因推定）
   - ファイルインポート処理（CSV / JSON パース、バリデーション）
@@ -87,23 +87,23 @@ Profit Trace は、複数プロジェクトの工数消化状況を日次で可�
 - インフラ: ローカル実行（uv 環境）
 
 #### データフローと Single Source of Truth
-- **インポートフロー**: CSV / JSON ファイル → Infrastructure 層（ファイル I/O）→ Application 層（バリデーション・集計）→ Infrastructure 層（SQLite 書き込み）→ Presentation 層（View 更新）
-- **表示フロー**: Presentation 層（ユーザー操作）→ Application 層（集計処理）→ Infrastructure 層（SQLite 読み込み）→ Application 層（グラフデータ生成）→ Presentation 層（plotly 描画）
+- **インポートフロー**: CSV / JSON ファイル → Infrastructure 層（ファイル I/O）→ Application 層（バリデーション・集計）→ Infrastructure 層（SQLite 書き込み）→ ViewModel（Signal 発行）→ View（Slot で受け取り、UI 更新）
+- **表示フロー**: View（ユーザー操作、Signal 発行）→ ViewModel（Slot で受け取り）→ Application 層（集計処理）→ Infrastructure 層（SQLite 読み込み）→ Application 層（グラフデータ生成）→ ViewModel（Signal 発行）→ View（Slot で受け取り、plotly 描画）
 - **Single Source of Truth**: 外部 CSV / JSON ファイル。SQLite は「表示・集計のためのキャッシュ」として機能し、再取り込みで上書き更新される。
-- **責務分離**: Presentation 層はデータを直接 SQLite から読まず、Application 層経由でアクセスする。Application 層は SQLite の存在を知らず、Infrastructure 層の抽象インターフェース（Repository 相当）を使用する。
+- **責務分離**: View はデータを直接 SQLite から読まず、ViewModel 経由でアクセスする。ViewModel はビジネスロジックを持たず、Application 層に委譲する。Application 層は SQLite の存在を知らず、Infrastructure 層の抽象インターフェース（Repository 相当）を使用する。
 
 ---
 
-### 3.2 Candidate B: DDD Lite Monolith（4 層構成 + MVP パターン）
+### 3.2 Candidate B: DDD Lite Monolith（4 層構成 + MVVM パターン）
 
 #### 概要
-Domain 層を独立させた 4 層構成（Presentation / Application / Domain / Infrastructure）のモノリスアーキテクチャ。DDD（Domain-Driven Design）の概念を軽量に導入し、ビジネスロジックを Domain 層に集約する。Presentation 層には Candidate A 同様 MVP パターンを適用する。将来の機能拡張（新しい集計軸、複雑な要因推定ロジック）を見据えた構成。
+Domain 層を独立させた 4 層構成（Presentation / Application / Domain / Infrastructure）のモノリスアーキテクチャ。DDD（Domain-Driven Design）の概念を軽量に導入し、ビジネスロジックを Domain 層に集約する。Presentation 層には Candidate A 同様 MVVM パターンを適用し、Qt の Signal/Slot メカニズムを活用する。将来の機能拡張（新しい集計軸、複雑な要因推定ロジック）を見据えた構成。
 
 #### 主な構成要素
 - **Presentation 層**:
   - PySide6（View: QMainWindow / QWidget / QDialog）
-  - MVP パターン（Presenter が View ↔ Application 層の仲介）
-  - 責務: ユーザー入力の受付、画面表示、プログレスバー / エラーダイアログの表示
+  - MVVM パターン（ViewModel が View ↔ Application 層の仲介、Signal/Slot でデータバインディング）
+  - 責務: ユーザー入力の受付（View が Signal で ViewModel に通知）、画面表示（ViewModel の Signal を View が Slot で受け取り）、プログレスバー / エラーダイアログの表示
 - **Application 層**:
   - ユースケース実装（ファイルインポート、プロジェクト一覧取得、バーンダウンデータ生成、メンバー稼働分析）
   - Domain 層と Infrastructure 層の橋渡し
@@ -129,23 +129,23 @@ Domain 層を独立させた 4 層構成（Presentation / Application / Domain /
 - インフラ: ローカル実行（uv 環境）
 
 #### データフローと Single Source of Truth
-- **インポートフロー**: CSV / JSON ファイル → Infrastructure 層（ファイル I/O）→ Application 層（ユースケース：ファイルインポート）→ Domain 層（バリデーション・エンティティ生成）→ Infrastructure 層（Repository 経由で SQLite 書き込み）→ Presentation 層（View 更新）
-- **表示フロー**: Presentation 層（ユーザー操作）→ Application 層（ユースケース：バーンダウン取得）→ Domain 層（バーンダウン計算ロジック）→ Infrastructure 層（Repository 経由で SQLite 読み込み）→ Domain 層（エンティティ返却）→ Application 層（DTO 変換）→ Presentation 層（plotly 描画）
+- **インポートフロー**: CSV / JSON ファイル → Infrastructure 層（ファイル I/O）→ Application 層（ユースケース：ファイルインポート）→ Domain 層（バリデーション・エンティティ生成）→ Infrastructure 層（Repository 経由で SQLite 書き込み）→ ViewModel（Signal 発行）→ View（Slot で受け取り、UI 更新）
+- **表示フロー**: View（ユーザー操作、Signal 発行）→ ViewModel（Slot で受け取り）→ Application 層（ユースケース：バーンダウン取得）→ Domain 層（バーンダウン計算ロジック）→ Infrastructure 層（Repository 経由で SQLite 読み込み）→ Domain 層（エンティティ返却）→ Application 層（DTO 変換）→ ViewModel（Signal 発行）→ View（Slot で受け取り、plotly 描画）
 - **Single Source of Truth**: 外部 CSV / JSON ファイル（Candidate A と同じ）。
-- **責務分離**: Domain 層は Infrastructure 層に依存しない（依存性逆転の原則）。Repository インターフェースは Domain 層で定義し、Infrastructure 層で実装する。Application 層は Domain 層のビジネスロジックを呼び出し、Infrastructure 層で永続化する。
+- **責務分離**: Domain 層は Infrastructure 層に依存しない（依存性逆転の原則）。Repository インターフェースは Domain 層で定義し、Infrastructure 層で実装する。Application 層は Domain 層のビジネスロジックを呼び出し、Infrastructure 層で永続化する。ViewModel はビジネスロジックを持たず、Application 層に委譲する。
 
 ---
 
 ### 3.3 Candidate C: Layered Monolith（3 層構成 + MVC パターン）
 
 #### 概要
-Candidate A と同じ 3 層構成だが、Presentation 層に MVC（Model-View-Controller）パターンを適用する。Controller が View と Application 層の仲介を行う。PySide6 の標準的な実装パターン（Qt Model/View フレームワーク）と親和性が高いが、データバインディングの複雑さが増す可能性がある。
+Candidate A と同じ 3 層構成だが、Presentation 層に MVC（Model-View-Controller）パターンを適用する。Controller が View と Application 層の仲介を行う。Qt Model/View フレームワーク（QAbstractItemModel、QTableView 等）を使用し、テーブル表示中心の UI に適している。ただし、View ↔ Model ↔ Controller の三角関係により、MVVM パターンよりも複雑になりやすい。
 
 #### 主な構成要素
 - **Presentation 層**:
-  - PySide6（View: QMainWindow / QWidget / QDialog、Model: QAbstractTableModel 等、Controller: カスタムクラス）
-  - MVC パターン（Controller が View ↔ Application 層の仲介、Model が View ↔ データの橋渡し）
-  - 責務: ユーザー入力の受付、画面表示、データバインディング
+  - PySide6（View: QMainWindow / QWidget / QDialog / QTableView、Model: QAbstractTableModel / QAbstractItemModel 等、Controller: カスタムクラス）
+  - MVC パターン（Controller が View ↔ Application 層の仲介、Qt Model が View ↔ データの橋渡し）
+  - 責務: ユーザー入力の受付（Controller が View のイベントを受け取る）、画面表示（View が Qt Model からデータを取得）、データバインディング（Qt Model/View フレームワーク）
 - **Application 層**:
   - Candidate A と同じ（ビジネスロジック、ファイルインポート処理）
 - **Infrastructure 層**:
@@ -155,8 +155,9 @@ Candidate A と同じ 3 層構成だが、Presentation 層に MVC（Model-View-C
 - Candidate A と同じ
 
 #### データフローと Single Source of Truth
-- Candidate A とほぼ同じだが、Presentation 層内で View ↔ Model 間のデータバインディングが追加される。
-- Qt Model/View フレームワークを使用する場合、QAbstractTableModel をカスタム実装し、Application 層からデータを取得して Model に格納する。
+- Candidate A とほぼ同じだが、Presentation 層内で View ↔ Qt Model 間のデータバインディングが追加される。
+- **表示フロー**: View（ユーザー操作）→ Controller（イベント処理）→ Application 層（集計処理）→ Infrastructure 層（SQLite 読み込み）→ Application 層（データ取得）→ Qt Model（データ格納、dataChanged Signal 発行）→ View（自動更新）
+- Qt Model/View フレームワークを使用する場合、QAbstractTableModel をカスタム実装し、Application 層からデータを取得して Qt Model に格納する。View は Qt Model の変更を自動的に検知して表示を更新する。
 
 ---
 
@@ -164,27 +165,27 @@ Candidate A と同じ 3 層構成だが、Presentation 層に MVC（Model-View-C
 
 ### 4.1 Quality Attributes × Candidate マトリクス
 
-| QA \ Candidate | A（Layered + MVP） | B（DDD Lite + MVP） | C（Layered + MVC） | コメント（重要な理由・具体策） |
+| QA \ Candidate | A（Layered + MVVM） | B（DDD Lite + MVVM） | C（Layered + MVC） | コメント（重要な理由・具体策） |
 |----------------|---------------------|---------------------|---------------------|----------------------------------|
-| QA-001<br>Performance | ◎ | ○ | ◎ | **A**: 処理経路が最短（Presentation → Application → Infrastructure）。CSV インポート時は pandas で一括読み込み→ SQLite 一括挿入。チャート描画は Application 層で集計後 plotly に渡すだけ。ワーカースレッド（QThread）でインポート / 描画を実行し、UI をフリーズさせない。<br>**B**: 抽象化層（Domain 層、Repository インターフェース）が 1 段増えるが、I/O 主体の処理のため影響は小さい（1〜2 秒程度の差）。Domain 層でのエンティティ生成コストが若干増加。<br>**C**: A とほぼ同等だが、Qt Model/View フレームワーク使用時のデータバインディングコストが追加される可能性。 |
-| QA-002<br>Usability | ◎ | ◎ | ○ | **A / B**: MVP パターンにより、Presenter が UI イベントを受け取り、Application 層を呼び出すシンプルな構造。ドラッグ&ドロップは View で実装し、Presenter に委譲。エラーダイアログは Presenter が View に指示。<br>**C**: MVC パターンでは Controller が複雑になりやすく（View ↔ Model ↔ Controller の三角関係）、エラーハンドリングの責務が分散しやすい。Qt Model/View フレームワークの学習コストも高い。 |
-| QA-003<br>Maintainability | ○ | ◎ | ○ | **A**: 3 層構成はシンプルだが、Application 層にビジネスロジックとユースケース調整が混在しやすい。将来の機能追加（新しい集計軸、複雑な要因推定）時に Application 層が肥大化するリスク。<br>**B**: Domain 層を独立させることで、ビジネスロジックの変更影響範囲を狭く保てる。Repository インターフェースにより、テスト時に Infrastructure 層をモックに差し替え可能。将来の拡張（新しいエンティティ、新しいビジネスルール）に強い。<br>**C**: A と同等だが、MVC パターンの複雑さ（View ↔ Model ↔ Controller の三角関係）により、変更時の影響範囲が読みにくくなる可能性。 |
-| QA-004<br>Availability | ◎ | ◎ | ◎ | **全候補**: 不正ファイル読み込み時は Application 層（または Domain 層）でバリデーションエラーを検出し、例外を Presentation 層に返却。Presenter（または Controller）がエラーダイアログを表示し、処理を中止。メモリリークは pandas の DataFrame を適切に解放し、QThread を正しく終了することで回避。長時間稼働のパフォーマンス劣化は、SQLite のコネクションプーリング不要（単独実行）のため発生しにくい。 |
+| QA-001<br>Performance | ◎ | ○ | ○ | **A**: 処理経路が最短（View → ViewModel → Application → Infrastructure）。CSV インポート時は pandas で一括読み込み→ SQLite 一括挿入。チャート描画は Application 層で集計後 plotly に渡すだけ。ワーカースレッド（QThread）でインポート / 描画を実行し、UI をフリーズさせない。ViewModel の Signal/Slot は軽量。<br>**B**: 抽象化層（Domain 層、Repository インターフェース）が 1 段増えるが、I/O 主体の処理のため影響は小さい（1〜2 秒程度の差）。Domain 層でのエンティティ生成コストが若干増加。<br>**C**: Qt Model/View フレームワーク使用時、Qt Model のデータ更新（dataChanged Signal）とテーブル表示の再描画コストが追加される。グラフ描画中心の本プロジェクトでは、この仕組みの利点を活かしにくい。 |
+| QA-002<br>Usability | ◎ | ◎ | ○ | **A / B**: MVVM パターンにより、ViewModel が UI イベントを Signal で受け取り、Application 層を呼び出すシンプルな構造。Qt の Signal/Slot メカニズムと自然に統合される。ドラッグ&ドロップは View で実装し、Signal で ViewModel に通知。エラーダイアログは ViewModel が Signal で View に指示。<br>**C**: MVC パターンでは Controller が複雑になりやすく（View ↔ Qt Model ↔ Controller の三角関係）、エラーハンドリングの責務が分散しやすい。Qt Model/View フレームワークはテーブル表示には適しているが、グラフ描画中心の本プロジェクトでは学習コストに見合う利点が少ない。 |
+| QA-003<br>Maintainability | ○ | ◎ | △ | **A**: 3 層構成はシンプルだが、Application 層にビジネスロジックとユースケース調整が混在しやすい。将来の機能追加（新しい集計軸、複雑な要因推定）時に Application 層が肥大化するリスク。<br>**B**: Domain 層を独立させることで、ビジネスロジックの変更影響範囲を狭く保てる。Repository インターフェースにより、テスト時に Infrastructure 層をモックに差し替え可能。将来の拡張（新しいエンティティ、新しいビジネスルール）に強い。<br>**C**: A と同等の Application 層肥大化リスクに加え、MVC パターンの複雑さ（View ↔ Qt Model ↔ Controller の三角関係）により、変更時の影響範囲が読みにくくなる。Qt Model のカスタム実装（QAbstractTableModel）が増えると、保守性がさらに低下する可能性。 |
+| QA-004<br>Availability | ◎ | ◎ | ◎ | **全候補**: 不正ファイル読み込み時は Application 層（または Domain 層）でバリデーションエラーを検出し、例外を Presentation 層に返却。ViewModel（または Controller）がエラーダイアログを表示し、処理を中止。メモリリークは pandas の DataFrame を適切に解放し、QThread を正しく終了することで回避。長時間稼働のパフォーマンス劣化は、SQLite のコネクションプーリング不要（単独実行）のため発生しにくい。 |
 | QA-005<br>Operability | ◎ | ◎ | ◎ | **全候補**: logging モジュールを Infrastructure 層で初期化し、全層でロガーを使用。エラー発生時は Application 層（または Domain 層）で logger.error() を呼び出し、スタックトレースを記録。ログファイルはアプリケーションディレクトリに保存（例: logs/profit_trace.log）。 |
 | QA-006<br>Security | ◎ | ◎ | ◎ | **全候補**: Infrastructure 層の SQLite アクセスおよび CSV / JSON I/O はローカルファイルシステムのみ。外部サーバーへの通信コードは一切含めない。OS のファイルアクセス権限に従う。 |
 | QA-007<br>Portability | ◎ | ◎ | ◎ | **全候補**: Python 3.12 + PySide6 + SQLite はクロスプラットフォーム対応。Windows ノート PC での動作保証（Constraints より）。 |
-| QA-008<br>Testability | ○ | ◎ | ○ | **A**: Presentation 層と Application 層が分離されているため、Application 層の単体テストは可能。ただし、Application 層が Infrastructure 層を直接呼び出すため、テスト時に SQLite のモックが必要。<br>**B**: Repository インターフェースにより、テスト時に Infrastructure 層をモックに差し替え可能。Domain 層のビジネスロジック（工数消化率計算、バーンダウン計算）は純粋な関数として実装でき、単体テストが容易。Application 層のユースケースも、Domain 層と Repository のモックで独立してテスト可能。<br>**C**: A と同等だが、MVC パターンの複雑さにより、Controller のテストが煩雑になる可能性。 |
+| QA-008<br>Testability | ○ | ◎ | △ | **A**: ViewModel と Application 層が分離されているため、Application 層の単体テストは可能。ViewModel のテストは Signal/Slot の発火を検証する必要があるが、Qt のテストフレームワーク（pytest-qt）で対応可能。ただし、Application 層が Infrastructure 層を直接呼び出すため、テスト時に SQLite のモックが必要。<br>**B**: Repository インターフェースにより、テスト時に Infrastructure 層をモックに差し替え可能。Domain 層のビジネスロジック（工数消化率計算、バーンダウン計算）は純粋な関数として実装でき、単体テストが容易。Application 層のユースケースも、Domain 層と Repository のモックで独立してテスト可能。<br>**C**: Controller と Qt Model の両方をテストする必要があり、テストコードが増加する。Qt Model のカスタム実装（QAbstractTableModel）のテストは、dataChanged Signal の発火タイミングや View との結合を検証する必要があり、煩雑になる。 |
 
 ---
 
 ### 4.2 リスクとトレードオフ
 
-#### Candidate A: Layered Monolith（3 層構成 + MVP パターン）
+#### Candidate A: Layered Monolith（3 層構成 + MVVM パターン）
 
 **強み**
-- **実装速度が速い**: 3 層構成はシンプルで、学習コストが低い。MVP パターンも理解しやすく、短期間で実装可能。
-- **パフォーマンスが高い**: 処理経路が最短で、抽象化層が少ないため、オーバーヘッドが小さい。
-- **小規模チームに適している**: 1〜3 名程度の開発体制では、過度な抽象化を避けることで開発効率を維持できる。
+- **実装速度が速い**: 3 層構成はシンプルで、学習コストが低い。MVVM パターンは Qt の Signal/Slot メカニズムと自然に統合され、短期間で実装可能。
+- **パフォーマンスが高い**: 処理経路が最短で、抽象化層が少ないため、オーバーヘッドが小さい。ViewModel の Signal/Slot は軽量で、UI のレスポンス性に影響しない。
+- **小規模チームに適している**: 1〜3 名程度の開発体制では、過度な抽象化を避けることで開発効率を維持できる。Qt の標準的なパターン（MVVM）を使用するため、学習コストも低い。
 
 **弱み / リスク**
 - **Application 層の肥大化リスク**: ビジネスロジックとユースケース調整が混在しやすく、将来の機能追加時に Application 層が肥大化する可能性。
@@ -202,7 +203,7 @@ Candidate A と同じ 3 層構成だが、Presentation 層に MVC（Model-View-C
 
 ---
 
-#### Candidate B: DDD Lite Monolith（4 層構成 + MVP パターン）
+#### Candidate B: DDD Lite Monolith（4 層構成 + MVVM パターン）
 
 **強み**
 - **変更容易性が高い**: Domain 層を独立させることで、ビジネスロジックの変更影響範囲を狭く保てる。Repository インターフェースにより、Infrastructure 層の変更（例: SQLite → PostgreSQL）が容易。
@@ -237,8 +238,8 @@ Candidate A と同じ 3 層構成だが、Presentation 層に MVC（Model-View-C
 - **テスト容易性の低下**: Controller のテストが煩雑になる可能性。
 
 **向いているケース / 向いていないケース**
-- **向いている**: Qt Model/View フレームワークの経験が豊富で、データバインディングを活用したい場合。テーブル表示が中心の UI 構成の場合。
-- **向いていない**: MVP パターンの経験が豊富で、シンプルな構造を優先する場合。グラフ描画が中心の UI 構成の場合（本プロジェクトはバーンダウンチャートが中心）。
+- **向いている**: Qt Model/View フレームワークの経験が豊富で、テーブル表示が中心の UI 構成の場合（例: プロジェクト一覧画面がメイン）。
+- **向いていない**: MVVM パターンの経験が豊富で、シンプルな構造を優先する場合。グラフ描画が中心の UI 構成の場合（本プロジェクトはバーンダウンチャートが中心）。
 
 **将来の機能拡張シナリオに対する見通し**
 - Candidate A とほぼ同等だが、MVC パターンの複雑さにより、変更時の影響範囲の確認コストが増加する可能性。
@@ -249,14 +250,14 @@ Candidate A と同じ 3 層構成だが、Presentation 層に MVC（Model-View-C
 
 ### 5.1 採用するアーキテクチャ
 
-**採用候補**: Candidate B（DDD Lite Monolith: 4 層構成 + MVP パターン）
+**採用候補**: Candidate B（DDD Lite Monolith: 4 層構成 + MVVM パターン）
 
 **採用理由**:
 - **主要品質特性（QA-003, QA-008）に対する適合性が最も高い**: Domain 層を独立させることで、Maintainability（変更容易性）と Testability（テスト容易性）が大幅に向上する。将来の機能拡張（新しい集計軸、複雑な要因推定ロジック）に強く、技術的負債の蓄積を抑制できる。
 - **既存システム / チームスキルとの整合性**: 小規模チーム（1〜3 名）でも実装可能な構成。DDD の概念は軽量に導入し、過度な抽象化を避ける（例: Aggregate Root は使用しない、Value Object は最小限）。PEP 8 準拠、テストカバレッジ 80% 以上の品質基準を維持しやすい。
 - **将来の拡張性**: 要件定義書（02_system-requirements.md）は凍結状態だが、ユーザーフィードバックにより機能追加が予想される（例: 新しいグラフ種類、部署別集計、Slack 通知）。Domain 層を独立させることで、これらの拡張が容易になる。
 - **データフローと Single Source of Truth の観点で一貫性を保ちやすい**: Repository インターフェースにより、Infrastructure 層の変更（例: SQLite → PostgreSQL、CSV → API 連携）が容易。Domain 層は Infrastructure 層に依存しないため、データソースの変更が Domain 層に影響しない。
-- **UI アーキテクチャの方針が選択したアプリケーションアーキテクチャと整合**: MVP パターンにより、Presentation 層と Application 層の責務が明確に分離される。Presenter が View ↔ Application 層の仲介を行い、View は UI イベントの受付と表示のみに集中できる。
+- **UI アーキテクチャの方針が選択したアプリケーションアーキテクチャと整合**: MVVM パターンにより、Presentation 層と Application 層の責務が明確に分離される。ViewModel が View ↔ Application 層の仲介を行い、Qt の Signal/Slot メカニズムと自然に統合される。View は UI イベントの受付と表示のみに集中できる。
 
 **Performance（QA-001）への影響について**:
 - Candidate B は Candidate A に比べて抽象化層が 1 段増えるが、要件の性能基準（CSV 読み込み: 5〜10 秒、チャート描画: 3〜5 秒）は十分に満たす。パフォーマンスのわずかな低下（1〜2 秒程度）は、Maintainability と Testability の大幅な向上によるトレードオフとして許容範囲内。
@@ -287,10 +288,11 @@ Candidate A と同じ 3 層構成だが、Presentation 層に MVC（Model-View-C
 
 **それでも優先度が下がる理由**:
 - **MVC パターンの複雑さ**: 本プロジェクトはテーブル表示よりもグラフ描画（バーンダウンチャート）が中心であり、Qt Model/View フレームワークの利点を活かしにくい。
-- **学習コストの増加**: MVP パターンよりも学習コストが高く、小規模チームでは実装効率が低下する可能性。
-- **エラーハンドリングの分散**: View ↔ Model ↔ Controller の三角関係により、エラーハンドリングの責務が分散しやすく、変更時の影響範囲が読みにくくなる。
+- **学習コストの増加**: MVVM パターンよりも学習コストが高く、小規模チームでは実装効率が低下する可能性。Qt Model のカスタム実装（QAbstractTableModel）が必要になり、実装コストが増加する。
+- **エラーハンドリングの分散**: View ↔ Qt Model ↔ Controller の三角関係により、エラーハンドリングの責務が分散しやすく、変更時の影響範囲が読みにくくなる。
+- **保守性の低下**: Qt Model の実装が増えると、データバインディングのロジックが複雑化し、保守性が低下する可能性。
 
-**判断**: Qt Model/View フレームワークの利点を活かせない UI 構成（グラフ中心）であり、MVP パターンの方がシンプルで実装しやすい。Candidate B を採用する。
+**判断**: Qt Model/View フレームワークの利点を活かせない UI 構成（グラフ中心）であり、MVVM パターンの方がシンプルで実装しやすい。Candidate B を採用する。
 
 ---
 
@@ -434,19 +436,19 @@ Candidate A と同じ 3 層構成だが、Presentation 層に MVC（Model-View-C
 
 ### Decision（決定）
 
-**DDD Lite Monolith（4 層構成: Presentation / Application / Domain / Infrastructure + MVP パターン）** を採用する。
+**DDD Lite Monolith（4 層構成: Presentation / Application / Domain / Infrastructure + MVVM パターン）** を採用する。
 
-**一文要約**: モジュラモノリス構成の 4 層アーキテクチャを採用し、Presentation / Application / Domain / Infrastructure の層で構成する。Presentation 層には MVP パターンを適用し、Domain 層にビジネスロジックを集約する。Repository パターンにより Domain 層と Infrastructure 層を分離し、依存性逆転の原則を適用する。
+**一文要約**: モジュラモノリス構成の 4 層アーキテクチャを採用し、Presentation / Application / Domain / Infrastructure の層で構成する。Presentation 層には MVVM パターンを適用し、Qt の Signal/Slot メカニズムを活用してデータバインディングを実現する。Domain 層にビジネスロジックを集約し、Repository パターンにより Domain 層と Infrastructure 層を分離し、依存性逆転の原則を適用する。
 
 ---
 
 ### Alternatives（代替案）
 
-**Candidate A: Layered Monolith（3 層構成 + MVP パターン）**
+**Candidate A: Layered Monolith（3 層構成 + MVVM パターン）**
 - **退けた理由**: 実装速度が速くパフォーマンスが高いが、Application 層の肥大化リスクがあり、将来の機能拡張時のリファクタリングコストが増加する可能性。テスト容易性も Candidate B に劣る。
 
 **Candidate C: Layered Monolith（3 層構成 + MVC パターン）**
-- **退けた理由**: Qt Model/View フレームワークとの親和性が高いが、本プロジェクトはグラフ描画中心であり、利点を活かしにくい。MVC パターンの複雑さにより、エラーハンドリングの責務が分散しやすく、変更時の影響範囲が読みにくくなる。
+- **退けた理由**: Qt Model/View フレームワークとの親和性が高いが、本プロジェクトはグラフ描画中心であり、利点を活かしにくい。MVC パターンの複雑さにより、エラーハンドリングの責務が分散しやすく、変更時の影響範囲が読みにくくなる。MVVM パターンよりも学習コストが高く、実装コストも増加する。
 
 ---
 
@@ -456,10 +458,13 @@ Candidate A と同じ 3 層構成だが、Presentation 層に MVC（Model-View-C
 - **QA-003（Maintainability）**: Domain 層を独立させることで、ビジネスロジックの変更影響範囲を狭く保てる。将来の機能拡張（新しい集計軸、複雑な要因推定）に強い。
 - **QA-008（Testability）**: Repository インターフェースにより、テスト時に Infrastructure 層をモックに差し替え可能。Domain 層のビジネスロジックは純粋な関数として実装でき、単体テストが容易。
 - **QA-001（Performance）**: 抽象化層が 1 段増えるが、要件の性能基準（CSV 読み込み: 5〜10 秒、チャート描画: 3〜5 秒）は十分に満たす。パフォーマンスのわずかな低下（1〜2 秒程度）は、Maintainability と Testability の大幅な向上によるトレードオフとして許容範囲内。
-- **QA-002（Usability）**: MVP パターンにより、Presenter が View ↔ Application 層の仲介を行い、UI イベントの処理がシンプルになる。
+- **QA-002（Usability）**: MVVM パターンにより、ViewModel が View ↔ Application 層の仲介を行い、Qt の Signal/Slot メカニズムと自然に統合される。UI イベントの処理がシンプルになる。
 
 **データフローとの整合性**:
 - Repository インターフェースにより、Infrastructure 層の変更（例: SQLite → PostgreSQL、CSV → API 連携）が容易。Domain 層は Infrastructure 層に依存しないため、データソースの変更が Domain 層に影響しない。
+
+**Qt との親和性**:
+- MVVM パターンは Qt の Signal/Slot メカニズムと自然に統合され、データバインディングが容易。ViewModel が Signal を発行し、View が Slot で受け取る仕組みは Qt の標準的な実装パターンに沿っている。
 
 ---
 
