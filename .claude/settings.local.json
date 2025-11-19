@@ -6,7 +6,10 @@
       "Bash(uv --version:*)",
       "Bash(mkdir:*)",
       "mcp__context7__resolve-library-id",
-      "mcp__context7__get-library-docs"
+      "mcp__context7__get-library-docs",
+      "Bash(python -m pytest:*)",
+      "Bash(python -m ruff:*)",
+      "Bash(python -m mypy:*)"
     ],
     "deny": [],
     "ask": []

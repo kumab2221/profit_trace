@@ -1,0 +1,1 @@
+"""Profit Trace application package."""
