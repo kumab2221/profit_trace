@@ -9,7 +9,8 @@
       "mcp__context7__get-library-docs",
       "Bash(python -m pytest:*)",
       "Bash(python -m ruff:*)",
-      "Bash(python -m mypy:*)"
+      "Bash(python -m mypy:*)",
+      "Bash(python -m py_compile:*)"
     ],
     "deny": [],
     "ask": []
